@@ -70,8 +70,7 @@ def test_full_text():
     sections = extractor.extract_sections(html_content)
     assert sections is not None
    
-    full_text = "\n".join([sec["content"] for sec in sections])
-    logger.info(full_text)
+    full_text = "\n".join([sec["section"] + "\n" + sec["content"] for sec in sections])
     assert full_text is not None and len(full_text) > 0
     
 

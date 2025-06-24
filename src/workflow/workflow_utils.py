@@ -18,7 +18,8 @@ def convert_html_to_plaintext(html: str) -> str | None:
         sections = extractor.extract_sections(html)
         if sections is None:
             return None
-        return "\n".join([sec['content'].strip() for sec in sections])
+        return "\n".join([sec["section"].strip() + "\n" + sec["content"].strip() \
+                          for sec in sections])
     except Exception as e:
         logger.error(f"Error converting HTML to plaintext: {e}")
         return None  # Return original HTML if conversion fails

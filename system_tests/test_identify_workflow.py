@@ -11,7 +11,7 @@ def test_IdentifyWorkflow(llm, step_callback):
     workflow.compile()
     
     # Define a sample PMID and research goal
-    pmid = "39951525" # "38987616"
+    pmid = "39641382" # "39951525" # "38987616"
     research_goal = ResearchGoalEnum.ALZHEIMERS
     
     # Execute the identify method
