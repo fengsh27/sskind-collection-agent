@@ -1,7 +1,8 @@
 
 import pytest
 
-from src.agents.identify_step import IdentifyRelevanceStep, IdentifyOriginalDataStep
+from src.agents.identify_relevant_step import IdentifyRelevanceStep
+from src.agents.identify_original_step import IdentifyOriginalDataStep
 from src.agents.agent_utils import IdentifyState, ResearchGoalEnum
 
 @pytest.mark.skip()
