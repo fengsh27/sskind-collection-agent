@@ -173,6 +173,15 @@ def query_title_and_abstract(pmid: str):
         return None, None
     
 def query_full_text(pmid: str) -> tuple[bool, str | None]:
+    """
+    Queries the full text of a paper by its PubMed ID (PMID).
+    Args:
+        pmid (str): The PubMed ID of the paper.
+    Returns:
+        tuple: A tuple containing a boolean indicating success and the full text content (html format) or None if not found.
+    Raises:
+        Exception: If there is an error during the request.
+    """
     retriever = ArticleRetriever()
     res, html_content, _ =retriever.request_article(pmid)
 

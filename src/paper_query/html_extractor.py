@@ -481,7 +481,7 @@ class HtmlTableExtractor(object):
 
         return None
 
-    def extract_sections(self, html: str):
+    def extract_sections(self, html: str) -> dict | None:
         for parser in self.parsers:
             sections = parser.extract_sections(html)
             if sections is not None:
