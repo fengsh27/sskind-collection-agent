@@ -1,9 +1,13 @@
 
 import pytest
-
+import logging
 from src.agents.identify_relevant_step import IdentifyRelevanceStep
 from src.agents.identify_original_step import IdentifyOriginalDataStep
 from src.agents.agent_utils import IdentifyState, ResearchGoalEnum
+from src.paper_query.pubmed_query import query_title_and_abstract
+from src.workflow.workflow_utils import obtain_full_text
+
+logger = logging.getLogger(__name__)
 
 @pytest.mark.skip()
 def test_IdentifyRelevanceStep(llm, step_callback):
@@ -23,29 +27,29 @@ def test_IdentifyRelevanceStep(llm, step_callback):
     assert result_state is not None
     
     # Check if the result contains the expected keys
-    assert "final_answer" in result_state
-    assert isinstance(result_state["final_answer"], bool)  # Should be a boolean value indicating relevance
+    assert "relevance" in result_state
+    assert isinstance(result_state["relevance"], bool)  # Should be a boolean value indicating relevance
 
-
-def test_IdentifyOriginalDataStep(llm, step_callback):
-    # pmid = "38987616"
-    full_text = ""
-    with open("system_tests/data/38987616.txt", "r") as f:
-        full_text = f.read()
+def test_IdentifyRelevanceStep_on_paper(llm, step_callback):
+    pmid = "40448997"
+    title, abstract = query_title_and_abstract(pmid)
+    # Create a mock state with title and abstract
     state = {
         "research_goal": ResearchGoalEnum.ALZHEIMERS,
-        "title": "'Single cell transcriptomes and multiscale networks from persons with and without Alzheimer’s disease'",
-        "content": full_text,
+        "title": title,
+        "abstract": abstract,
         "step_output_callback": step_callback,
     }
     
-    # Initialize the IdentifyOriginalDataStep with a mock LLM
-    step = IdentifyOriginalDataStep(llm)
+    # Initialize the IdentifyRelevanceStep with a mock LLM
+    step = IdentifyRelevanceStep(llm, two_steps_agent=True)
     
     # Execute the step
-    result_state: dict | None = step.execute(state)
+    result_state: IdentifyState | None = step.execute(state)
     assert result_state is not None
     
     # Check if the result contains the expected keys
-    assert "final_answer" in result_state
-    assert isinstance(result_state["final_answer"], bool)  # Should be a boolean value indicating original data availability
+    assert "relevant" in result_state
+    assert isinstance(result_state["relevant"], bool)  # Should be a boolean value indicating relevance
+
+    logger.info(f"PMID: {pmid}, Relevant: {result_state['relevant']}")

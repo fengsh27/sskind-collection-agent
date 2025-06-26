@@ -55,7 +55,7 @@ def test_query_title_and_abstract():
 
 # @pytest.mark.skip()
 def test_full_text():
-    pmid = "38987616"
+    pmid = "16143486" # "38987616"
     res, html_content = query_full_text(pmid)
     assert res
     assert html_content is not None

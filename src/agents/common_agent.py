@@ -59,6 +59,7 @@ class CommonAgent:
             if not is_OK:  # skip
                 return None, None, None, None
         
+        system_prompt = system_prompt.replace("{", "(").replace("}", ")")
         return self._invoke_agent(
             system_prompt,
             instruction_prompt,

@@ -67,6 +67,13 @@ def output_step(
     if step_output is not None:
         output_info(step_output)
 
+def output_alzheimer_result(pmid: str, relevant: bool):
+    with open("results.txt", "a") as f:
+        if relevant:
+            f.write(f"{pmid} is relevant to Alzheimer's disease and single-cell RNA sequencing.\n")
+        else:
+            f.write(f"{pmid} is NOT relevant to Alzheimer's disease and single-cell RNA sequencing.\n")
+
 def main_alzheimers():
     query = '(Alzheimer AND ("single cell" OR "single nucleus" OR "single-cell")) AND ("RNA sequencing" OR "RNA-seq" OR "single-cell RNA-seq")'
     mindate = "2024/06/01"
@@ -91,6 +98,7 @@ def main_alzheimers():
             logger.info(f"PMID {pmid} is relevant to Alzheimer's disease and single-cell RNA sequencing.")
         else:
             logger.info(f"PMID {pmid} is NOT relevant to Alzheimer's disease and single-cell RNA sequencing.")
+        output_alzheimer_result(pmid, valid)
     
     logger.info(f"Total relevant PMIDs: {len(valid_pmids)}")
     logger.info(f"Relevant PMIDs: {valid_pmids}")

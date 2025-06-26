@@ -23,3 +23,21 @@ def convert_html_to_plaintext(html: str) -> str | None:
     except Exception as e:
         logger.error(f"Error converting HTML to plaintext: {e}")
         return None  # Return original HTML if conversion fails
+    
+def obtain_full_text(pmid: str) -> str | None:
+    """
+    Obtain the full text of a paper given its PubMed ID (PMID).
+    Args:
+        pmid (str): The PubMed ID of the paper.
+    Returns:
+        str: The full text content of the paper, or None if not available.
+    """
+    try:
+        from ..paper_query.pubmed_query import query_full_text
+        res, html = query_full_text(pmid)
+        if not res or html is None:
+            return None
+        return convert_html_to_plaintext(html)
+    except Exception as e:
+        logger.error(f"Error obtaining full text for PMID {pmid}: {e}")
+        return None  # Return None if unable to obtain full text

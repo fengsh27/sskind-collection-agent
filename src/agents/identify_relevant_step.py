@@ -42,6 +42,9 @@ Respond in the following format:
 """)
 
 class IdentifyRelevanceResult(BaseModel):
+    reasoning_process: Optional[str] = Field(
+        description="The reasoning process used to determine relevance."
+    )
     relevant: bool = Field(
         description="Indicates whether the paper is relevant to the research topic."
     )
@@ -54,10 +57,12 @@ class IdentifyRelevanceStep(sskindCommonStep):
     def __init__(
         self, 
         llm: BaseChatOpenAI,
+        two_steps_agent: bool = False,
     ):
         super().__init__(llm)
         self.llm = llm
         self.step_name = "Identify Relevance Step"
+        self.two_steps_agent = two_steps_agent
 
     def _execute_directly(self, state: dict) -> tuple[dict | None, dict[str, int] | None]:
         typed_state: IdentifyState = IdentifyState(**state)
@@ -66,7 +71,7 @@ class IdentifyRelevanceStep(sskindCommonStep):
         title = typed_state.get("title")
         abstract = typed_state.get("abstract")
 
-        agent = CommonAgent(self.llm) # CommonAgentTwoSteps(self.llm)
+        agent = CommonAgent(self.llm) if not self.two_steps_agent else CommonAgentTwoSteps(self.llm)
         system_prompt = IDENTIFY_RELEVANCE_SYSTEM_PROMPT.format(
             research_goal=research_goal,
             title=title, 
@@ -74,13 +79,13 @@ class IdentifyRelevanceStep(sskindCommonStep):
         )
         res, _, token_usage, reasoning_process = agent.go(
             system_prompt=system_prompt,
-            instruction_prompt="Now, let's identify the relevance of this paper.",
+            instruction_prompt="Before jumping to final answer, you need to explain **the reasoning process** first.\nNow, let's identify the relevance of this paper.",
             schema=IdentifyRelevanceResult,
         )
         typed_state["relevant"] = res.relevant
-        # self._print_step(
-        #     typed_state,
-            # step_output=reasoning_process,
-        # )
+        self._print_step(
+            typed_state,
+            step_output=res.reasoning_process if reasoning_process is None else reasoning_process,
+        )
 
         return dict(typed_state), token_usage

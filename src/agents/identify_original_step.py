@@ -18,8 +18,16 @@ You are an expert in **biomedical research** and a skilled **data scientist**.
 We are collecting data from published literature related to {research_goal}.
 You will be provided with the **title** and **full text** of a scientific paper.
 
-Your task is to determine whether the data in the paper is **original** and not previously published.
+Your task is to determine:
+
+1. Whether the data presented in the paper is **original** (i.e., newly generated and not previously published).
+2. Whether the data is **publicly accessible** (i.e., available through a repository, supplementary materials, or other open sources).
+
 ---
+
+### **INstructions**
+1. If the paper is preprint version, if there is not public link provided, you should assume the data is not publicly accessible.
+2. If the paper is not preprint version, you can assume the data is publicly accessible.
 
 ### **Input**
 **Title:**
@@ -30,7 +38,7 @@ Your task is to determine whether the data in the paper is **original** and not 
 
 ### **Output**
 Please answer the following question:
-**Is the data in this paper original and not previously published?**
+**Is the data in this paper original and not previously published, and publicly accessible?**
 
 Respond in the following format:
 
@@ -38,8 +46,11 @@ Respond in the following format:
 """)
 
 class IdentifyOriginalDataResult(BaseModel):
-    original: bool = Field(
-        description="Indicates whether the data in the paper is original and not previously published."
+    reasoning_process: Optional[str] = Field(
+        description="The reasoning process used to determine relevance."
+    )
+    original_and_accessible: bool = Field(
+        description="Indicates whether the data in the paper is original and not previously published, and publicly accessible."
     )
 
 class IdentifyOriginalDataStep(sskindCommonStep):
@@ -49,10 +60,12 @@ class IdentifyOriginalDataStep(sskindCommonStep):
     def __init__(
         self, 
         llm: BaseChatOpenAI,
+        two_steps_agent: bool = False,
     ):
         super().__init__(llm)
         self.llm = llm
         self.step_name = "Identify Original Data Step"
+        self.two_steps_agent = two_steps_agent
 
     def _execute_directly(self, state: dict) -> tuple[dict | None, dict[str, int] | None]:
         typed_state: IdentifyState = IdentifyState(**state)
@@ -61,7 +74,7 @@ class IdentifyOriginalDataStep(sskindCommonStep):
         title = typed_state.get("title")
         full_text = typed_state.get("content")
 
-        agent = CommonAgent(llm=self.llm) # CommonAgentTwoSteps(self.llm)
+        agent = CommonAgent(llm=self.llm) if not self.two_steps_agent else CommonAgentTwoSteps(self.llm)
         system_prompt = IDENTIFY_ORIGINAL_DATA_SYSTEM_PROMPT.format(
             research_goal=research_goal,
             title=title, 
@@ -69,14 +82,14 @@ class IdentifyOriginalDataStep(sskindCommonStep):
         )
         res, _, token_usage, reasoning_process = agent.go(
             system_prompt=system_prompt,
-            instruction_prompt="Now, let's identify if the data is original.",
+            instruction_prompt="Before jumping to final answer, you need to explain **the reasoning process** first.\nNow, let's identify if the data is original and accessible.",
             schema=IdentifyOriginalDataResult,
         )
-        typed_state["original"] = res.original
-        # self._print_step(
-        #     typed_state,
-        #     step_output=reasoning_process,
-        # )
+        typed_state["original"] = res.original_and_accessible
+        self._print_step(
+            typed_state,
+            step_output=res.reasoning_process if reasoning_process is None else reasoning_process,
+        )
 
         return dict(typed_state), token_usage
 
