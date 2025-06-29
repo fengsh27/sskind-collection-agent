@@ -4,7 +4,7 @@ import logging
 from src.agents.identify_relevant_step import IdentifyRelevanceStep
 from src.agents.identify_original_step import IdentifyOriginalDataStep
 from src.agents.agent_utils import IdentifyState, ResearchGoalEnum
-from src.paper_query.pubmed_query import query_title_and_abstract
+from src.paper_query.pubmed_query import query_title_abstract_ispreprint
 from src.workflow.workflow_utils import obtain_full_text
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ def test_IdentifyRelevanceStep(llm, step_callback):
 
 def test_IdentifyRelevanceStep_on_paper(llm, step_callback):
     pmid = "40448997"
-    title, abstract = query_title_and_abstract(pmid)
+    title, abstract, is_preprint = query_title_abstract_ispreprint(pmid)
     # Create a mock state with title and abstract
     state = {
         "research_goal": ResearchGoalEnum.ALZHEIMERS,

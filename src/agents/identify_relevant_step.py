@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from .common_step import sskindCommonStep
 from .common_agent import CommonAgent
 from .common_agent_2step import CommonAgentTwoSteps
-from .agent_utils import IdentifyState, research_goal_dict
+from .agent_utils import IdentifyState, RESEARCH_GOAL_DICT
 
 IDENTIFY_RELEVANCE_SYSTEM_PROMPT = ChatPromptTemplate.from_template("""
 ---
@@ -67,7 +67,7 @@ class IdentifyRelevanceStep(sskindCommonStep):
     def _execute_directly(self, state: dict) -> tuple[dict | None, dict[str, int] | None]:
         typed_state: IdentifyState = IdentifyState(**state)
         research_goal_enum = typed_state.get("research_goal")
-        research_goal = research_goal_dict[research_goal_enum]
+        research_goal = RESEARCH_GOAL_DICT[research_goal_enum]
         title = typed_state.get("title")
         abstract = typed_state.get("abstract")
 

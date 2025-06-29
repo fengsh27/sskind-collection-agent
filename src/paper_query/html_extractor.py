@@ -20,6 +20,66 @@ def get_tag_text(tag: Tag) -> str:
         text += the_text
     return text
 
+def extract_data_availability(html: str) -> Optional[str]:
+    soup = BeautifulSoup(html, "html.parser")
+        
+    # Find a heading tag that contains the word "data availability" (case-insensitive)
+    data_availability_heading = soup.find(
+        lambda tag: tag.name in ["h1", "h2", "h3"] and "data" in tag.get_text(strip=True).lower() and "availability" in tag.get_text(strip=True).lower()
+    )
+    
+    if not data_availability_heading:
+        return None
+    # Find the parent <section> or container that wraps the data availability section
+    data_availability_section = data_availability_heading.find_parent("section")
+    if not data_availability_section:
+        data_availability_section = data_availability_heading.find_parent("div")
+        if not data_availability_section:
+            # return None # No wrapping section found 
+            return None
+    
+    text = ""
+    for child in data_availability_section.children:
+        if child.name == "h1" or child.name == "h2" or child.name == "h3":
+            # Skip headings within the data availability section
+            continue
+        child_text = child.get_text(separator=" ", strip=True)
+        if child_text:
+            text += child_text + "\n"
+    return text.strip() if text else None
+
+def extract_methods(html: str) -> Optional[str]:
+    soup = BeautifulSoup(html, "html.parser")
+    
+    # Find a heading tag that contains the word "methods" (case-insensitive)
+    method_names = ["methods", "methodology", "method", "mothodologies"]
+    methods_heading = soup.find(
+        lambda tag: tag.name in ["h1", "h2", "h3"] and any(x in tag.get_text(strip=True).lower() for x in method_names)
+    )
+
+    
+    if not methods_heading:
+        return None  # No methods heading found
+    
+    # Find the parent <section> or container that wraps the methods section
+    methods_section = methods_heading.find_parent("section")
+    if not methods_section:
+        methods_section = methods_heading.find_parent("div")
+        if not methods_section:
+            # return None # No wrapping section found 
+            return None
+    
+    text = ""
+    for child in methods_section.children:
+        if child.name == "h2" or child.name == "h3":
+            # Skip headings within the methods section
+            continue
+        child_text = child.get_text(separator=" ", strip=True)
+        if child_text:
+            text += child_text + "\n"
+    
+    return text.strip() if text else None
+
 class HtmlTableParser(object):
     MAX_LEVEL = 3
     CAPTION_TAG_CANDIDATES = ["figcaption"]
@@ -231,7 +291,7 @@ class HtmlTableParser(object):
             if "abstract" in section["section"].lower():
                 return section["content"].replace("\n", " ")
         return (sections[0]["section"] + "\n" + sections[0]["content"]).replace("\n", " ") + "\n......" or None
-
+    
     def extract_sections(self, html: str):
         """
         Yichuan 0528
@@ -378,7 +438,7 @@ class PMCHtmlTableParser(object):
         abstract_text = "\n".join(p.get_text(separator=" ", strip=True) for p in abstract_paragraphs)
 
         return abstract_text.strip()
-
+    
     def extract_sections(self, html: str):
         """
         Yichuan 0505
@@ -480,6 +540,12 @@ class HtmlTableExtractor(object):
                 return escape_braces_for_format(abstract)
 
         return None
+    
+    def extract_data_availability(self, html: str):
+        return extract_data_availability(html)
+    
+    def extract_methods(self, html: str):
+        return extract_methods(html)
 
     def extract_sections(self, html: str) -> dict | None:
         for parser in self.parsers:

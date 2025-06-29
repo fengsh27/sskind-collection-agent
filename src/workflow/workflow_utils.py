@@ -5,7 +5,11 @@ from ..paper_query.html_extractor import HtmlTableExtractor
 
 logger = logging.getLogger(__name__)
 
-def convert_html_to_plaintext(html: str) -> str | None:
+def convert_html_to_plaintext(
+    html: str, 
+    include_data_availability=True,
+    include_methods=True,
+) -> str | None:
     """
     Converts HTML content to plain text by removing HTML tags and decoding HTML entities.
     Args:
@@ -18,6 +22,15 @@ def convert_html_to_plaintext(html: str) -> str | None:
         sections = extractor.extract_sections(html)
         if sections is None:
             return None
+        if include_data_availability:
+            data_availability = extractor.extract_data_availability(html)
+            if data_availability:
+                sections.append({"section": "Data Availability", "content": data_availability})
+        
+        if include_methods:
+            methods = extractor.extract_methods(html)
+            if methods:
+                sections.append({"section": "Methods", "content": methods})
         return "\n".join([sec["section"].strip() + "\n" + sec["content"].strip() \
                           for sec in sections])
     except Exception as e:

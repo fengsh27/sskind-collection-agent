@@ -75,8 +75,8 @@ def output_alzheimer_result(pmid: str, relevant: bool):
             f.write(f"{pmid} is NOT relevant to Alzheimer's disease and single-cell RNA sequencing.\n")
 
 def main_alzheimers():
-    query = '(Alzheimer AND ("single cell" OR "single nucleus" OR "single-cell")) AND ("RNA sequencing" OR "RNA-seq" OR "single-cell RNA-seq")'
-    mindate = "2024/06/01"
+    query = '("Alzheimer") AND ("scRNA-seq" OR "single cell RNA sequencing"  OR "snRNA-seq" OR "single nucleus RNA sequencing")' # '(Alzheimer AND ("single cell" OR "single nucleus" OR "single-cell")) AND ("RNA sequencing" OR "RNA-seq" OR "single-cell RNA-seq")'
+    mindate = "2024/01/01"
     maxdate = "2025/06/01"
     count = query_count(query, mindate, maxdate)
     logger.info(f"Total articles found: {count}")
@@ -105,11 +105,41 @@ def main_alzheimers():
 
     return valid_pmids
 
+def main_spatial():
+    query = '("Alzheimer") AND ("spatial transcriptomic" OR "spatial gene expression" OR "spatial transcriptomics")'
+    mindate = "2017/01/01"
+    maxdate = "2025/06/01"
+    count = query_count(query, mindate, maxdate)
+    logger.info(f"Total articles found: {count}")
+    pmids = query_pmids(query, count, mindate, maxdate)
+    wf = IdentifyWorkflow(
+        llm=get_azure_openai(),
+        step_callback=output_step,
+    )
+    wf.compile()
+    valid_pmids = []
+    for pmid in pmids:
+        logger.info(f"PMID: {pmid}")
+        valid = wf.identify(
+            pmid=pmid,
+            research_goal=ResearchGoalEnum.SPATIAL,
+        )
+        if valid:
+            valid_pmids.append(pmid)
+            logger.info(f"PMID {pmid} is relevant to Alzheimer's disease and spatial transcriptomics.")
+        else:
+            logger.info(f"PMID {pmid} is NOT relevant to Alzheimer's disease and spatial transcriptomics.")
+        output_alzheimer_result(pmid, valid)
     
+    logger.info(f"Total relevant PMIDs: {len(valid_pmids)}")
+    logger.info(f"Relevant PMIDs: {valid_pmids}")
+
+    return valid_pmids    
 
 
 def main():
-    main_alzheimers()
+    # main_alzheimers()
+    main_spatial()
 
 if __name__ == "__main__":
     main()

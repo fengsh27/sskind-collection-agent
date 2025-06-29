@@ -4,7 +4,7 @@ from langgraph.graph import StateGraph, START, END
 from langchain_openai.chat_models.base import BaseChatOpenAI
 
 from ..paper_query.pubmed_query import (
-    query_title_and_abstract,
+    query_title_abstract_ispreprint,
     query_full_text,
 )
 from ..agents.identify_relevant_step import (
@@ -66,8 +66,8 @@ class IdentifyWorkflow:
         Returns:
             IdentifyState: The state containing the results of the identification process.
         """
-        title, abstract = query_title_and_abstract(pmid)
-        if not title or not abstract:
+        title, abstract, is_preprint = query_title_abstract_ispreprint(pmid)
+        if not title or not abstract or is_preprint:
             return False
         res, html_content = query_full_text(pmid)
         if not res or not html_content:
@@ -75,6 +75,7 @@ class IdentifyWorkflow:
         full_text = convert_html_to_plaintext(html_content)
         if not full_text:
             return False
+        
 
         state = IdentifyState(
             research_goal=research_goal,

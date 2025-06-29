@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from .common_step import sskindCommonStep
 from .common_agent import CommonAgent
 from .common_agent_2step import CommonAgentTwoSteps
-from .agent_utils import IdentifyState, research_goal_dict
+from .agent_utils import IdentifyState, RESEARCH_GOAL_DICT, IMPORTANT_INSTRUCTIONS_DICT
 
 
 IDENTIFY_ORIGINAL_DATA_SYSTEM_PROMPT = ChatPromptTemplate.from_template("""
@@ -20,14 +20,18 @@ You will be provided with the **title** and **full text** of a scientific paper.
 
 Your task is to determine:
 
-1. Whether the data presented in the paper is **original** (i.e., newly generated and not previously published).
+1. Whether **the data** presented in the paper is **original** (i.e., newly generated and not previously published).
 2. Whether the data is **publicly accessible** (i.e., available through a repository, supplementary materials, or other open sources).
 
 ---
 
-### **INstructions**
-1. If the paper is preprint version, if there is not public link provided, you should assume the data is not publicly accessible.
-2. If the paper is not preprint version, you can assume the data is publicly accessible.
+### **Instructions**
+1. If the paper is preprint version and there is not public link provided, you should assume the data is not publicly accessible.
+2. If In **Data Availability** section, the data is described as **available upon request** or uses similar language, you should assume the data is not publicly accessible.
+3. You should evaluate if **the data** is original and accessible, not the entire paper.
+
+### **Important Instructions**
+{important_instructions}
 
 ### **Input**
 **Title:**
@@ -70,7 +74,8 @@ class IdentifyOriginalDataStep(sskindCommonStep):
     def _execute_directly(self, state: dict) -> tuple[dict | None, dict[str, int] | None]:
         typed_state: IdentifyState = IdentifyState(**state)
         research_goal_enum = typed_state.get("research_goal")
-        research_goal = research_goal_dict[research_goal_enum]
+        research_goal = RESEARCH_GOAL_DICT[research_goal_enum]
+        important_instructions = IMPORTANT_INSTRUCTIONS_DICT[research_goal_enum]
         title = typed_state.get("title")
         full_text = typed_state.get("content")
 
@@ -78,7 +83,8 @@ class IdentifyOriginalDataStep(sskindCommonStep):
         system_prompt = IDENTIFY_ORIGINAL_DATA_SYSTEM_PROMPT.format(
             research_goal=research_goal,
             title=title, 
-            full_text=full_text
+            full_text=full_text,
+            important_instructions=important_instructions,
         )
         res, _, token_usage, reasoning_process = agent.go(
             system_prompt=system_prompt,

@@ -150,7 +150,15 @@ def query_pmids(
         for id in ids:
             yield id
     
-def query_title_and_abstract(pmid: str):
+def query_title_abstract_ispreprint(pmid: str) -> tuple[str | None, str | None, bool]:
+    """Queries the title, abstract, and preprint status of a paper by its PubMed ID (PMID).
+    Args:
+        pmid (str): The PubMed ID of the paper.
+    Returns:
+        tuple: A tuple containing the title, abstract, and a boolean indicating if it is a preprint.
+    Raises:
+        Exception: If there is an error during the request or parsing the response.
+    """
     params = {
         "id": pmid,
         "db": "pubmed",
@@ -162,15 +170,20 @@ def query_title_and_abstract(pmid: str):
             params=params,
         )
         root = ET.fromstring(result.content)
+        is_preprint = False
         for article in root.findall(".//PubmedArticle"):
             title = article.findtext(".//ArticleTitle")
             abstract = article.findtext(".//Abstract/AbstractText")
-            return title, abstract
+            publication_types = article.findall(".//PublicationType")
+            for pub_type in publication_types:
+                if pub_type.text.lower() in ["preprint", "pre-print"]:
+                    is_preprint = True
+            return title, abstract, is_preprint
         
-        return None, None
+        return None, None, False
     except Exception as e:
         logger.error(str(e))
-        return None, None
+        return None, None, False
     
 def query_full_text(pmid: str) -> tuple[bool, str | None]:
     """
