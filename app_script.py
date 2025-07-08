@@ -3,17 +3,20 @@ import os
 from typing import Optional
 from dotenv import load_dotenv
 import logging
+import yaml
 
 from langchain_openai.chat_models import AzureChatOpenAI
 
 from src.agents.agent_utils import ResearchGoalEnum, increase_token_usage
 from src.agents.constants import DEFAULT_TOKEN_USAGE
+from config.constants import ScopeTypeEnum
 
+from src.config_utils import read_config_identify_instructions, read_config_query
 from src.paper_query.pubmed_query import (
     query_count,
     query_pmids,
 )
-from src.workflow.identify_workflow import IdentifyWorkflow
+from src.workflow.identify_workflow import IdentifyWorkflow, identify_workflow
 from src.log_utils import initialize_logger
 
 load_dotenv()
@@ -75,9 +78,8 @@ def output_alzheimer_result(pmid: str, relevant: bool):
             f.write(f"{pmid} is NOT relevant to Alzheimer's disease and single-cell RNA sequencing.\n")
 
 def main_alzheimers():
-    query = '("Alzheimer") AND ("scRNA-seq" OR "single cell RNA sequencing"  OR "snRNA-seq" OR "single nucleus RNA sequencing")' # '(Alzheimer AND ("single cell" OR "single nucleus" OR "single-cell")) AND ("RNA sequencing" OR "RNA-seq" OR "single-cell RNA-seq")'
-    mindate = "2024/01/01"
-    maxdate = "2025/06/01"
+    query, mindate, maxdate = read_config_query(ScopeTypeEnum.SC_ALZHEIMERS) # '("Alzheimer") AND ("scRNA-seq" OR "single cell RNA sequencing"  OR "snRNA-seq" OR "single nucleus RNA sequencing")' # '(Alzheimer AND ("single cell" OR "single nucleus" OR "single-cell")) AND ("RNA sequencing" OR "RNA-seq" OR "single-cell RNA-seq")'
+    identify_instructions = read_config_identify_instructions(ScopeTypeEnum.SC_ALZHEIMERS)
     count = query_count(query, mindate, maxdate)
     logger.info(f"Total articles found: {count}")
     pmids = query_pmids(query, count, mindate, maxdate)
@@ -89,9 +91,12 @@ def main_alzheimers():
     valid_pmids = []
     for pmid in pmids:
         logger.info(f"PMID: {pmid}")
-        valid = wf.identify(
+        valid = identify_workflow(
+            wf=wf,
             pmid=pmid,
+            llm=get_azure_openai(),
             research_goal=ResearchGoalEnum.ALZHEIMERS,
+            identify_instructions=identify_instructions,
         )
         if valid:
             valid_pmids.append(pmid)
@@ -138,8 +143,8 @@ def main_spatial():
 
 
 def main():
-    # main_alzheimers()
-    main_spatial()
+    main_alzheimers()
+    # main_spatial()
 
 if __name__ == "__main__":
     main()

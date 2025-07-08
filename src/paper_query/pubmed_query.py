@@ -5,6 +5,7 @@ import time
 import math
 import xml.etree.ElementTree as ET
 
+from src.database.pmid_paper_db import PMIDPaperDB
 from .article_retriever import ArticleRetriever
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,7 @@ PUBMED_DATABASE_LIST = [
 ]
 ESEARCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 EFETCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+
 
 def build_query_param(
     mindate: str | None = None,
@@ -112,8 +114,8 @@ def query_count(
             logger.error(f"Error occurred in querying {db}: str(e)\n Error: {error_in_res}")
             return 0
     return 0
-    
-STEP_COUNT = 100
+
+STEP_COUNT = 100    
 def query_pmids(
     term: str,
     count: int,
@@ -199,3 +201,72 @@ def query_full_text(pmid: str) -> tuple[bool, str | None]:
     res, html_content, _ =retriever.request_article(pmid)
 
     return res, html_content
+
+
+class PubMedPaperRetriever:
+    """
+    A class to retrieve PubMed papers based on a search term, and to fetch their titles, abstracts, and full text.
+    """
+
+    def __init__(self):
+        self.db = PMIDPaperDB()
+    
+    def query_pmids(
+        self,
+        term: str,
+        count: int,
+        mindate: str | None = None,
+        maxdate: str | None = None,
+        datetype: str = "pdat",
+    ):
+        """
+        Queries PubMed for PMIDs based on a search term and date range.
+        
+        Args:
+            term (str): The search term to query PubMed.
+            count (int): The number of PMIDs to retrieve.
+            mindate (str, optional): The minimum date for the search.
+            maxdate (str, optional): The maximum date for the search.
+            datetype (str): The type of date to use for the search.
+        
+        Yields:
+            str: A PMID from the search results.
+        """
+        return query_pmids(term, count, mindate, maxdate, datetype)
+    
+    def query_title_abstract_ispreprint(self, pmid: str) -> tuple[str | None, str | None, bool]:
+        """
+        Queries the title, abstract, and preprint status of a paper by its PubMed ID (PMID).
+        
+        Args:
+            pmid (str): The PubMed ID of the paper.
+        
+        Returns:
+            tuple: A tuple containing the title, abstract, and a boolean indicating if it is a preprint.
+        """
+        title, abstract, is_preprint = self.db.select_paper_title_abstract(pmid)
+        if title is not None:
+            return title, abstract, is_preprint
+        title, abstract, is_preprint = query_title_abstract_ispreprint(pmid)
+        self.db.insert_paper_title_abstract(pmid, title, abstract, is_preprint)
+        return title, abstract, is_preprint
+    
+    def query_full_text(self, pmid: str) -> tuple[bool, str | None]:
+        """
+        Queries the full text of a paper by its PubMed ID (PMID).
+        
+        Args:
+            pmid (str): The PubMed ID of the paper.
+        
+        Returns:
+            tuple: A tuple containing a boolean indicating success and the full text content (html format) or None if not found.
+        """
+        html_content = self.db.select_paper_html_content(pmid)
+        if html_content is not None:
+            return True, html_content
+        res, html_content = query_full_text(pmid)
+        if res and html_content:
+            self.db.insert_paper_html_content(pmid, html_content)
+        return res, html_content
+
+

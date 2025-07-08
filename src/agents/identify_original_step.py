@@ -74,8 +74,10 @@ class IdentifyOriginalDataStep(sskindCommonStep):
     def _execute_directly(self, state: dict) -> tuple[dict | None, dict[str, int] | None]:
         typed_state: IdentifyState = IdentifyState(**state)
         research_goal_enum = typed_state.get("research_goal")
+
         research_goal = RESEARCH_GOAL_DICT[research_goal_enum]
-        important_instructions = IMPORTANT_INSTRUCTIONS_DICT[research_goal_enum]
+        # important_instructions = IMPORTANT_INSTRUCTIONS_DICT[research_goal_enum]
+        important_instructions = typed_state.get("identify_instructions", "N/A")
         title = typed_state.get("title")
         full_text = typed_state.get("content")
 

@@ -16,6 +16,7 @@ from ..agents.identify_original_step import (
 from ..agents.agent_utils import IdentifyState, ResearchGoalEnum
 
 from .workflow_utils import convert_html_to_plaintext
+from ..paper_query.pubmed_query import PubMedPaperRetriever
 
 class IdentifyWorkflow:
     def __init__(
@@ -26,6 +27,7 @@ class IdentifyWorkflow:
         self.llm = llm
         self.steps = []
         self.step_callback = step_callback
+        self.paper_retriever = PubMedPaperRetriever()  # Placeholder for paper retriever if needed
 
     def compile(self):
         """
@@ -58,7 +60,12 @@ class IdentifyWorkflow:
 
         self.graph = graph.compile()
 
-    def identify(self, pmid: str, research_goal: ResearchGoalEnum) -> bool:
+    def identify(
+        self, 
+        pmid: str, 
+        research_goal: ResearchGoalEnum,
+        identify_instructions: Optional[str] = None
+    ) -> bool:
         """
         Identify the relevance and original data of a paper by its PubMed ID (PMID).
         Args:
@@ -66,10 +73,10 @@ class IdentifyWorkflow:
         Returns:
             IdentifyState: The state containing the results of the identification process.
         """
-        title, abstract, is_preprint = query_title_abstract_ispreprint(pmid)
+        title, abstract, is_preprint = self.paper_retriever.query_title_abstract_ispreprint(pmid) # query_title_abstract_ispreprint(pmid)
         if not title or not abstract or is_preprint:
             return False
-        res, html_content = query_full_text(pmid)
+        res, html_content = self.paper_retriever.query_full_text(pmid) # query_full_text(pmid)
         if not res or not html_content:
             return False
         full_text = convert_html_to_plaintext(html_content)
@@ -83,8 +90,7 @@ class IdentifyWorkflow:
             abstract=abstract,
             content=full_text,
             step_output_callback=self.step_callback,
-            relevant=None,
-            original=None
+            identify_instructions=identify_instructions or "N/A",
         )
 
         s = None
@@ -101,3 +107,29 @@ class IdentifyWorkflow:
         return s.get("relevant", False) and s.get("original", False)
 
         
+def identify_workflow(
+    wf: IdentifyWorkflow,
+    pmid: str, 
+    llm: BaseChatOpenAI, 
+    step_callback: Optional[Callable] = None,
+    research_goal: ResearchGoalEnum = ResearchGoalEnum.ALZHEIMERS,
+    identify_instructions: Optional[str] = None,
+) -> bool:
+    """
+    Identify the relevance and original data of a paper by its PubMed ID (PMID).
+    Args:
+        pmid (str): The PubMed ID of the paper.
+        llm (BaseChatOpenAI): The language model to use.
+        step_callback (Optional[Callable]): Callback function for step output.
+        research_goal (ResearchGoalEnum): The research goal to use.
+        identify_instructions (Optional[str]): Additional instructions for identification.
+    Returns:
+        bool: True if the paper is relevant and has original data, False otherwise.
+    """
+    wf = IdentifyWorkflow(llm=llm, step_callback=step_callback)
+    wf.compile()
+    return wf.identify(
+        pmid=pmid,
+        research_goal=research_goal,
+        identify_instructions=identify_instructions,
+    )
