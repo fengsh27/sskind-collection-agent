@@ -95,6 +95,7 @@ def execute_collection(
     count = query_count(query, mindate, maxdate)
     logger.info(f"Total articles found: {count}")
     pmids = query_pmids(query, count, mindate, maxdate)
+    all_pmids = []
     wf = IdentifyWorkflow(
         llm=get_azure_openai(),
         step_callback=output_step,
@@ -102,6 +103,7 @@ def execute_collection(
     wf.compile()
     valid_pmids = []
     for pmid in pmids:
+        all_pmids.append(pmid)
         logger.info(f"PMID: {pmid}")
         valid = identify_workflow(
             wf=wf,
@@ -121,7 +123,7 @@ def execute_collection(
     
     logger.info("=" * 64)
     logger.info(f"Final Result: {scope}")
-    logger.info(f"Query results number: {len(pmids)}, Total relevant PMIDs: {len(valid_pmids)}")
+    logger.info(f"Query results number: {len(all_pmids)}, Total relevant PMIDs: {len(valid_pmids)}")
     logger.info(f"Relevant PMIDs: {valid_pmids}")
     
     return valid_pmids
@@ -181,6 +183,8 @@ def main_execute(scope: str):
 def main(scope):
     main_execute(scope)
 
+    for handler in logger.handlers:
+        handler.flush()
     logging.shutdown()
 
 if __name__ == "__main__":
