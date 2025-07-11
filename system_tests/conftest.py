@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from config.constants import ScopeTypeEnum
 from src.agents.agent_utils import increase_token_usage
 from src.agents.constants import DEFAULT_TOKEN_USAGE
-from src.config_utils import read_config_identify_instructions, read_config_query
+from src.config_utils import read_config_identify_original_instructions, read_config_identify_relevant_instructions, read_config_query
 
 load_dotenv()
 
@@ -60,8 +60,12 @@ def sc_alzheimers_query():
     return read_config_query(ScopeTypeEnum.SC_ALZHEIMERS)
 
 @pytest.fixture(scope="module")
-def sc_alzheimers_identify_instructions():
-    return read_config_identify_instructions(ScopeTypeEnum.SC_ALZHEIMERS)
+def sc_alzheimers_identify_original_instructions():
+    return read_config_identify_original_instructions(ScopeTypeEnum.SC_ALZHEIMERS)
+
+@pytest.fixture(scope="module")
+def sc_alzheimers_identify_relevant_instructions():
+    return read_config_identify_relevant_instructions(ScopeTypeEnum.SC_ALZHEIMERS)
 
 @pytest.fixture(scope="module")
 def step_callback():

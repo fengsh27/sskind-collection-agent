@@ -7,25 +7,31 @@ from src.workflow.identify_workflow import IdentifyWorkflow, identify_workflow
 def test_IdentifyWorkflow_sc_alzheimer(
     llm, 
     step_callback,
-    sc_alzheimers_identify_instructions,
+    sc_alzheimers_identify_original_instructions,
+    sc_alzheimers_identify_relevant_instructions,
 ):
     # Initialize the IdentifyWorkflow with a mock LLM and step callback
-    workflow = IdentifyWorkflow(llm=llm, step_callback=step_callback)
+    workflow = IdentifyWorkflow(
+        llm=llm, 
+        step_callback=step_callback,
+        two_steps_agent=True,
+    )
     
     # Compile the workflow
     workflow.compile()
     
     # Define a sample PMID and research goal
-    # pmid = "38181047" # should not be original data
-    pmid = "38263132" # should not be original data
+    # pmid = "38263132" # should not be original data
+    # pmid = "38167548"
+    pmid = "38331937"
     research_goal = ResearchGoalEnum.ALZHEIMERS
     
     result = identify_workflow(
         wf=workflow,
         pmid=pmid,
-        llm=llm,
         research_goal=research_goal,
-        identify_instructions=sc_alzheimers_identify_instructions,
+        identify_original_instructions=sc_alzheimers_identify_original_instructions,
+        identify_relevant_instructions=sc_alzheimers_identify_relevant_instructions,
     )
         
     # Check if the result is a boolean indicating relevance

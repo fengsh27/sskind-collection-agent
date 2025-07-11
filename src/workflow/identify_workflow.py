@@ -22,12 +22,14 @@ class IdentifyWorkflow:
     def __init__(
         self, 
         llm: BaseChatOpenAI, 
-        step_callback: Optional[Callable] = None
+        step_callback: Optional[Callable] = None,
+        two_steps_agent: bool = False,
     ):
         self.llm = llm
         self.steps = []
         self.step_callback = step_callback
         self.paper_retriever = PubMedPaperRetriever()  # Placeholder for paper retriever if needed
+        self.two_steps_agent = two_steps_agent
 
     def compile(self):
         """
@@ -36,27 +38,29 @@ class IdentifyWorkflow:
         self.steps.append(
             IdentifyRelevanceStep(
                 llm=self.llm,
+                two_steps_agent=self.two_steps_agent,
             )
         )
         self.steps.append(
             IdentifyOriginalDataStep(
                 llm=self.llm,
+                two_steps_agent=self.two_steps_agent,
             )
         )
-        def check_relevance(state: IdentifyState) -> bool:
-            relevance = state.get("relevant", None)
-            if relevance is None:
+        def check_original(state: IdentifyState) -> bool:
+            original = state.get("original", None)
+            if original is None:
                 return False
-            return relevance
+            return original
         
         graph = StateGraph(IdentifyState)
         graph.add_node("identify_relevance", self.steps[0].execute)
         graph.add_node("identify_original_data", self.steps[1].execute)
-        graph.add_edge(START, "identify_relevance")
-        graph.add_conditional_edges("identify_relevance", check_relevance, {
-            True: "identify_original_data", False: END
+        graph.add_edge(START, "identify_original_data")
+        graph.add_conditional_edges("identify_original_data", check_original, {
+            True: "identify_relevance", False: END
         })
-        graph.add_edge("identify_original_data", END)
+        graph.add_edge("identify_relevance", END)
 
         self.graph = graph.compile()
 
@@ -64,7 +68,8 @@ class IdentifyWorkflow:
         self, 
         pmid: str, 
         research_goal: ResearchGoalEnum,
-        identify_instructions: Optional[str] = None
+        identify_original_instructions: Optional[str] = None,
+        identify_relevant_instructions: Optional[str] = None,
     ) -> bool:
         """
         Identify the relevance and original data of a paper by its PubMed ID (PMID).
@@ -85,12 +90,14 @@ class IdentifyWorkflow:
         
 
         state = IdentifyState(
+            pmid=pmid,
             research_goal=research_goal,
             title=title,
             abstract=abstract,
             content=full_text,
             step_output_callback=self.step_callback,
-            identify_instructions=identify_instructions or "N/A",
+            identify_original_instructions=identify_original_instructions or "N/A",
+            identify_relevant_instructions=identify_relevant_instructions or "N/A",
         )
 
         s = None
@@ -110,10 +117,9 @@ class IdentifyWorkflow:
 def identify_workflow(
     wf: IdentifyWorkflow,
     pmid: str, 
-    llm: BaseChatOpenAI, 
-    step_callback: Optional[Callable] = None,
     research_goal: ResearchGoalEnum = ResearchGoalEnum.ALZHEIMERS,
-    identify_instructions: Optional[str] = None,
+    identify_original_instructions: Optional[str] = None,
+    identify_relevant_instructions: Optional[str] = None,
 ) -> bool:
     """
     Identify the relevance and original data of a paper by its PubMed ID (PMID).
@@ -122,14 +128,13 @@ def identify_workflow(
         llm (BaseChatOpenAI): The language model to use.
         step_callback (Optional[Callable]): Callback function for step output.
         research_goal (ResearchGoalEnum): The research goal to use.
-        identify_instructions (Optional[str]): Additional instructions for identification.
+        identify_original_instructions (Optional[str]): Additional instructions for identification.
     Returns:
         bool: True if the paper is relevant and has original data, False otherwise.
     """
-    wf = IdentifyWorkflow(llm=llm, step_callback=step_callback)
-    wf.compile()
     return wf.identify(
         pmid=pmid,
         research_goal=research_goal,
-        identify_instructions=identify_instructions,
+        identify_original_instructions=identify_original_instructions,
+        identify_relevant_instructions=identify_relevant_instructions,
     )

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from .common_step import sskindCommonStep
 from .common_agent import CommonAgent
 from .common_agent_2step import CommonAgentTwoSteps
-from .agent_utils import IdentifyState, RESEARCH_GOAL_DICT, IMPORTANT_INSTRUCTIONS_DICT
+from .agent_utils import IdentifyState, RESEARCH_GOAL_DICT
 
 
 IDENTIFY_ORIGINAL_DATA_SYSTEM_PROMPT = ChatPromptTemplate.from_template("""
@@ -15,7 +15,7 @@ IDENTIFY_ORIGINAL_DATA_SYSTEM_PROMPT = ChatPromptTemplate.from_template("""
 
 You are an expert in **biomedical research** and a skilled **data scientist**.
 
-We are collecting data from published literature related to {research_goal}.
+We are collecting data from published literature related to **{research_goal}**.
 You will be provided with the **title** and **full text** of a scientific paper.
 
 Your task is to determine:
@@ -73,11 +73,11 @@ class IdentifyOriginalDataStep(sskindCommonStep):
 
     def _execute_directly(self, state: dict) -> tuple[dict | None, dict[str, int] | None]:
         typed_state: IdentifyState = IdentifyState(**state)
-        research_goal_enum = typed_state.get("research_goal")
-
-        research_goal = RESEARCH_GOAL_DICT[research_goal_enum]
-        # important_instructions = IMPORTANT_INSTRUCTIONS_DICT[research_goal_enum]
-        important_instructions = typed_state.get("identify_instructions", "N/A")
+        pmid = typed_state.get("pmid", "N/A")
+        self._print_step(typed_state, step_output=f"PMID: {pmid}")
+        
+        research_goal = typed_state.get("research_goal")
+        important_instructions = typed_state.get("identify_original_instructions", "N/A")
         title = typed_state.get("title")
         full_text = typed_state.get("content")
 
