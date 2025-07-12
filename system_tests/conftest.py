@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 
 from src.agents.agent_utils import increase_token_usage
 from src.agents.constants import DEFAULT_TOKEN_USAGE
+from src.config_utils import read_config_identify_original_instructions, read_config_identify_relevant_instructions, read_config_query
 
 load_dotenv()
 
@@ -52,6 +53,18 @@ def prepare_logging():
 @pytest.fixture(scope="module")
 def llm():
     return get_azure_openai()
+
+@pytest.fixture(scope="module")
+def sc_alzheimers_query():
+    return read_config_query("Alzheimer_SingleCell")
+
+@pytest.fixture(scope="module")
+def sc_alzheimers_identify_original_instructions():
+    return read_config_identify_original_instructions("Alzheimer_SingleCell")
+
+@pytest.fixture(scope="module")
+def sc_alzheimers_identify_relevant_instructions():
+    return read_config_identify_relevant_instructions("Alzheimer_SingleCell")
 
 @pytest.fixture(scope="module")
 def step_callback():

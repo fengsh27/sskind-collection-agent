@@ -3,17 +3,22 @@ import os
 from typing import Optional
 from dotenv import load_dotenv
 import logging
-
 from langchain_openai.chat_models import AzureChatOpenAI
 
 from src.agents.agent_utils import ResearchGoalEnum, increase_token_usage
 from src.agents.constants import DEFAULT_TOKEN_USAGE
 
+from src.config_utils import (
+    read_config_identify_original_instructions, 
+    read_config_identify_relevant_instructions, 
+    read_config_query,
+    read_config_scopes,
+)
 from src.paper_query.pubmed_query import (
     query_count,
     query_pmids,
 )
-from src.workflow.identify_workflow import IdentifyWorkflow
+from src.workflow.identify_workflow import IdentifyWorkflow, identify_workflow
 from src.log_utils import initialize_logger
 
 load_dotenv()
@@ -67,79 +72,95 @@ def output_step(
     if step_output is not None:
         output_info(step_output)
 
-def output_alzheimer_result(pmid: str, relevant: bool):
+def output_collect_result(
+    scope: str,
+    pmid: str, 
+    relevant: bool
+):
     with open("results.txt", "a") as f:
         if relevant:
-            f.write(f"{pmid} is relevant to Alzheimer's disease and single-cell RNA sequencing.\n")
+            f.write(f"{pmid} is relevant to {scope}.\n")
         else:
-            f.write(f"{pmid} is NOT relevant to Alzheimer's disease and single-cell RNA sequencing.\n")
+            f.write(f"{pmid} is NOT relevant to {scope}.\n")
 
-def main_alzheimers():
-    query = '("Alzheimer") AND ("scRNA-seq" OR "single cell RNA sequencing"  OR "snRNA-seq" OR "single nucleus RNA sequencing")' # '(Alzheimer AND ("single cell" OR "single nucleus" OR "single-cell")) AND ("RNA sequencing" OR "RNA-seq" OR "single-cell RNA-seq")'
-    mindate = "2024/01/01"
-    maxdate = "2025/06/01"
+def execute_collection(
+    scope: str,
+    query: str,
+    mindate: str,
+    maxdate: str,
+    identify_original_instructions: str,
+    identify_relevant_instructions: str,
+): 
     count = query_count(query, mindate, maxdate)
     logger.info(f"Total articles found: {count}")
     pmids = query_pmids(query, count, mindate, maxdate)
+    all_pmids = []
     wf = IdentifyWorkflow(
         llm=get_azure_openai(),
         step_callback=output_step,
+        two_steps_agent=True,
     )
     wf.compile()
     valid_pmids = []
     for pmid in pmids:
+        all_pmids.append(pmid)
         logger.info(f"PMID: {pmid}")
-        valid = wf.identify(
+        valid = identify_workflow(
+            wf=wf,
             pmid=pmid,
-            research_goal=ResearchGoalEnum.ALZHEIMERS,
+            research_goal=scope,
+            identify_original_instructions=identify_original_instructions,
+            identify_relevant_instructions=identify_relevant_instructions,
         )
         if valid:
             valid_pmids.append(pmid)
-            logger.info(f"PMID {pmid} is relevant to Alzheimer's disease and single-cell RNA sequencing.")
+            logger.info(f"PMID {pmid} is relevant to {scope}")
         else:
-            logger.info(f"PMID {pmid} is NOT relevant to Alzheimer's disease and single-cell RNA sequencing.")
-        output_alzheimer_result(pmid, valid)
+            logger.info(f"PMID {pmid} is NOT relevant to {scope}")
+        output_collect_result(
+            scope=scope, pmid=pmid, relevant=valid
+        )
     
-    logger.info(f"Total relevant PMIDs: {len(valid_pmids)}")
+    logger.info("=" * 64)
+    logger.info(f"Final Result: {scope}")
+    logger.info(f"Query results number: {len(all_pmids)}, Total relevant PMIDs: {len(valid_pmids)}")
     logger.info(f"Relevant PMIDs: {valid_pmids}")
-
+    
     return valid_pmids
 
-def main_spatial():
-    query = '("Alzheimer") AND ("spatial transcriptomic" OR "spatial gene expression" OR "spatial transcriptomics")'
-    mindate = "2017/01/01"
-    maxdate = "2025/06/01"
-    count = query_count(query, mindate, maxdate)
-    logger.info(f"Total articles found: {count}")
-    pmids = query_pmids(query, count, mindate, maxdate)
-    wf = IdentifyWorkflow(
-        llm=get_azure_openai(),
-        step_callback=output_step,
+def main_execute(scope: str):
+    query, mindate, maxdate = read_config_query(scope) # '("Alzheimer") AND ("scRNA-seq" OR "single cell RNA sequencing"  OR "snRNA-seq" OR "single nucleus RNA sequencing")' # '(Alzheimer AND ("single cell" OR "single nucleus" OR "single-cell")) AND ("RNA sequencing" OR "RNA-seq" OR "single-cell RNA-seq")'
+    identify_original_instructions = read_config_identify_original_instructions(scope)
+    identify_relevant_instructions = read_config_identify_relevant_instructions(scope)
+    valid_pmids = execute_collection(
+        scope=scope,
+        query=query,
+        mindate=mindate,
+        maxdate=maxdate,
+        identify_original_instructions=identify_original_instructions,
+        identify_relevant_instructions=identify_relevant_instructions,
     )
-    wf.compile()
-    valid_pmids = []
-    for pmid in pmids:
-        logger.info(f"PMID: {pmid}")
-        valid = wf.identify(
-            pmid=pmid,
-            research_goal=ResearchGoalEnum.SPATIAL,
-        )
-        if valid:
-            valid_pmids.append(pmid)
-            logger.info(f"PMID {pmid} is relevant to Alzheimer's disease and spatial transcriptomics.")
-        else:
-            logger.info(f"PMID {pmid} is NOT relevant to Alzheimer's disease and spatial transcriptomics.")
-        output_alzheimer_result(pmid, valid)
     
-    logger.info(f"Total relevant PMIDs: {len(valid_pmids)}")
-    logger.info(f"Relevant PMIDs: {valid_pmids}")
-
     return valid_pmids    
 
 
-def main():
-    # main_alzheimers()
-    main_spatial()
+def main(scope):
+    main_execute(scope)
+
+    for handler in logger.handlers:
+        handler.flush()
+    logging.shutdown()
 
 if __name__ == "__main__":
-    main()
+    entries = read_config_scopes()
+    str_entries = str(entries)
+    str_entries = str_entries[1:]
+    str_entries = str_entries[:-1]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", "--scope", default="SC_Alzheimer", help=f"disease scope, like {str_entries}")
+    args = parser.parse_args()
+    args = vars(args)
+    if not args["scope"] or args["scope"] not in entries:
+        parser.print_usage()
+    else:
+        main(args["scope"])

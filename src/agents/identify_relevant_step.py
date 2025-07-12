@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from .common_step import sskindCommonStep
 from .common_agent import CommonAgent
-from .common_agent_2step import CommonAgentTwoSteps
+from .common_agent_2step import CommonAgentTwoSteps, CommonAgentTwoChainSteps
 from .agent_utils import IdentifyState, RESEARCH_GOAL_DICT
 
 IDENTIFY_RELEVANCE_SYSTEM_PROMPT = ChatPromptTemplate.from_template("""
@@ -14,10 +14,14 @@ IDENTIFY_RELEVANCE_SYSTEM_PROMPT = ChatPromptTemplate.from_template("""
 
 You are an expert in **biomedical research** and a skilled **data scientist**.
 
-We are collecting data from published literature related to {research_goal}.
-You will be provided with the **title** and **abstract** of a scientific paper.
+We are collecting data from published literature related to **{research_goal}**.
+You will be provided with the **title** and **full text** of a scientific paper.
 
-Your task is to determine whether the paper is **relevant** to our research focus.
+Your task is to determine whether the data in the paper is **relevant** to our research focus.
+
+---
+### **Instructions**
+{identify_relevant_instructions}
 
 ---
 
@@ -26,15 +30,15 @@ Your task is to determine whether the paper is **relevant** to our research focu
 **Title:**
 {title}
 
-**Abstract:**
-{abstract}
+**Full Text:**
+{full_text}
 
 ---
 
 ### **Output**
 
 Please answer the following question:
-**Is this paper relevant to research on Alzheimer's disease and single-cell RNA sequencing?**
+**Is this paper relevant to research on {research_goal}?**
 
 Respond in the following format:
 
@@ -66,16 +70,20 @@ class IdentifyRelevanceStep(sskindCommonStep):
 
     def _execute_directly(self, state: dict) -> tuple[dict | None, dict[str, int] | None]:
         typed_state: IdentifyState = IdentifyState(**state)
-        research_goal_enum = typed_state.get("research_goal")
-        research_goal = RESEARCH_GOAL_DICT[research_goal_enum]
+        pmid = typed_state.get("pmid", "N/A")
+        self._print_step(typed_state, step_output=f"PMID: {pmid}")
+        research_goal = typed_state.get("research_goal")
+        identify_relevant_instructions = typed_state.get("identify_relevant_instructions", "N/A")
         title = typed_state.get("title")
         abstract = typed_state.get("abstract")
+        full_text = typed_state.get("content")
 
-        agent = CommonAgent(self.llm) if not self.two_steps_agent else CommonAgentTwoSteps(self.llm)
+        agent = CommonAgent(self.llm) if not self.two_steps_agent else CommonAgentTwoChainSteps(self.llm)
         system_prompt = IDENTIFY_RELEVANCE_SYSTEM_PROMPT.format(
             research_goal=research_goal,
             title=title, 
-            abstract=abstract
+            full_text=full_text,
+            identify_relevant_instructions=identify_relevant_instructions,
         )
         res, _, token_usage, reasoning_process = agent.go(
             system_prompt=system_prompt,
