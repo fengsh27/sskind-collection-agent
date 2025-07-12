@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from .common_step import sskindCommonStep
 from .common_agent import CommonAgent
-from .common_agent_2step import CommonAgentTwoSteps
+from .common_agent_2step import CommonAgentTwoSteps, CommonAgentTwoChainSteps
 from .agent_utils import IdentifyState, RESEARCH_GOAL_DICT
 
 IDENTIFY_RELEVANCE_SYSTEM_PROMPT = ChatPromptTemplate.from_template("""
@@ -38,7 +38,7 @@ Your task is to determine whether the data in the paper is **relevant** to our r
 ### **Output**
 
 Please answer the following question:
-**Is this paper relevant to research on Alzheimer's disease and single-cell RNA sequencing?**
+**Is this paper relevant to research on {research_goal}?**
 
 Respond in the following format:
 
@@ -78,7 +78,7 @@ class IdentifyRelevanceStep(sskindCommonStep):
         abstract = typed_state.get("abstract")
         full_text = typed_state.get("content")
 
-        agent = CommonAgent(self.llm) if not self.two_steps_agent else CommonAgentTwoSteps(self.llm)
+        agent = CommonAgent(self.llm) if not self.two_steps_agent else CommonAgentTwoChainSteps(self.llm)
         system_prompt = IDENTIFY_RELEVANCE_SYSTEM_PROMPT.format(
             research_goal=research_goal,
             title=title, 

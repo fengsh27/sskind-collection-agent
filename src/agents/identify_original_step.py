@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from .common_step import sskindCommonStep
 from .common_agent import CommonAgent
-from .common_agent_2step import CommonAgentTwoSteps
+from .common_agent_2step import CommonAgentTwoSteps, CommonAgentTwoChainSteps
 from .agent_utils import IdentifyState, RESEARCH_GOAL_DICT
 
 
@@ -81,7 +81,7 @@ class IdentifyOriginalDataStep(sskindCommonStep):
         title = typed_state.get("title")
         full_text = typed_state.get("content")
 
-        agent = CommonAgent(llm=self.llm) if not self.two_steps_agent else CommonAgentTwoSteps(self.llm)
+        agent = CommonAgent(llm=self.llm) if not self.two_steps_agent else CommonAgentTwoChainSteps(self.llm)
         system_prompt = IDENTIFY_ORIGINAL_DATA_SYSTEM_PROMPT.format(
             research_goal=research_goal,
             title=title, 

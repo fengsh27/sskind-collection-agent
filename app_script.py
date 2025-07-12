@@ -7,7 +7,6 @@ from langchain_openai.chat_models import AzureChatOpenAI
 
 from src.agents.agent_utils import ResearchGoalEnum, increase_token_usage
 from src.agents.constants import DEFAULT_TOKEN_USAGE
-from config.constants import ScopeTypeEnum
 
 from src.config_utils import (
     read_config_identify_original_instructions, 
@@ -99,6 +98,7 @@ def execute_collection(
     wf = IdentifyWorkflow(
         llm=get_azure_openai(),
         step_callback=output_step,
+        two_steps_agent=True,
     )
     wf.compile()
     valid_pmids = []
@@ -126,42 +126,6 @@ def execute_collection(
     logger.info(f"Query results number: {len(all_pmids)}, Total relevant PMIDs: {len(valid_pmids)}")
     logger.info(f"Relevant PMIDs: {valid_pmids}")
     
-    return valid_pmids
-
-def main_alzheimers(checked_pmids: list[str] | None = None):
-    query, mindate, maxdate = read_config_query(ScopeTypeEnum.SC_ALZHEIMERS) # '("Alzheimer") AND ("scRNA-seq" OR "single cell RNA sequencing"  OR "snRNA-seq" OR "single nucleus RNA sequencing")' # '(Alzheimer AND ("single cell" OR "single nucleus" OR "single-cell")) AND ("RNA sequencing" OR "RNA-seq" OR "single-cell RNA-seq")'
-    identify_original_instructions = read_config_identify_original_instructions(ScopeTypeEnum.SC_ALZHEIMERS)
-    identify_relevant_instructions = read_config_identify_relevant_instructions(ScopeTypeEnum.SC_ALZHEIMERS)
-    count = query_count(query, mindate, maxdate)
-    logger.info(f"Total articles found: {count}")
-    pmids = query_pmids(query, count, mindate, maxdate)
-    wf = IdentifyWorkflow(
-        llm=get_azure_openai(),
-        step_callback=output_step,
-    )
-    wf.compile()
-    valid_pmids = []
-    for pmid in pmids:
-        if checked_pmids is not None and pmid in checked_pmids:
-            continue
-        logger.info(f"PMID: {pmid}")
-        valid = identify_workflow(
-            wf=wf,
-            pmid=pmid,
-            research_goal=ResearchGoalEnum.ALZHEIMERS,
-            identify_original_instructions=identify_original_instructions,
-            identify_relevant_instructions=identify_relevant_instructions,
-        )
-        if valid:
-            valid_pmids.append(pmid)
-            logger.info(f"PMID {pmid} is relevant to Alzheimer's disease and single-cell RNA sequencing.")
-        else:
-            logger.info(f"PMID {pmid} is NOT relevant to Alzheimer's disease and single-cell RNA sequencing.")
-        output_collect_result("Alzheimer", "single-cell RNA sequencing", pmid, valid)
-    
-    logger.info(f"Total relevant PMIDs: {len(valid_pmids)}")
-    logger.info(f"Relevant PMIDs: {valid_pmids}")
-
     return valid_pmids
 
 def main_execute(scope: str):

@@ -25,20 +25,21 @@ scopes_to_run = [
     # 'Parkinson_SingleCell', 
     # 'Frontotemporal_Dementia_SingleCell', 
     # 'Multiple_Sclerosis_SingleCell', 
-    
+    # 
     # 'Spinal_Muscular_Atrophy_SingleCell', 
     # 'Amyotrophic_Lateral_Sclerosis_SingleCell', 
     # 'Spinocerebellar_ataxia_SingleCell', 
     # 'Huntingtons_SingleCell', 
     # 'Prion_diseases_SingleCell', 
-    
-    'Parkinson_Spatial', 
-    'Multiple_Sclerosis_Spatial', 
-    'Amyotrophic_Lateral_Sclerosis_Spatial', 
-    'Spinal_Muscular_Atrophy_Spatial', 
-    'Spinocerebellar_ataxia_Spatial', 
-    'Huntington_disease_Spatial', 
-    'Prion_diseases_Spatial',
+    # 
+    # 'Parkinson_Spatial', 
+    "Frontotemporal_Dementia_Spatial",
+    # 'Multiple_Sclerosis_Spatial', 
+    # 'Amyotrophic_Lateral_Sclerosis_Spatial', 
+    # 'Spinal_Muscular_Atrophy_Spatial', 
+    # 'Spinocerebellar_ataxia_Spatial', 
+    # 'Huntington_disease_Spatial', 
+    # 'Prion_diseases_Spatial',
 ]
 
 def main():

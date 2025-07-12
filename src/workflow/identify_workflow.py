@@ -67,7 +67,7 @@ class IdentifyWorkflow:
     def identify(
         self, 
         pmid: str, 
-        research_goal: ResearchGoalEnum,
+        research_goal: str,
         identify_original_instructions: Optional[str] = None,
         identify_relevant_instructions: Optional[str] = None,
     ) -> bool:
@@ -117,7 +117,7 @@ class IdentifyWorkflow:
 def identify_workflow(
     wf: IdentifyWorkflow,
     pmid: str, 
-    research_goal: ResearchGoalEnum = ResearchGoalEnum.ALZHEIMERS,
+    research_goal: str,
     identify_original_instructions: Optional[str] = None,
     identify_relevant_instructions: Optional[str] = None,
 ) -> bool:

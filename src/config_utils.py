@@ -1,7 +1,5 @@
 import yaml
 
-from config.constants import ScopeTypeEnum
-
 def read_config_query(scope: str):
     with open("./config/scope_config.yaml", 'r') as file:
         config = yaml.safe_load(file)
